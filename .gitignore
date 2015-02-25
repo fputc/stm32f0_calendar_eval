@@ -33,3 +33,6 @@
 *.cogui
 *.comaker
 *.coproj
+
+#target folder
+stm32f0_calendar_eval
