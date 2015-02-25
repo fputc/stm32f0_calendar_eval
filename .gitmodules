@@ -1,0 +1,4 @@
+[submodule "ah_stm32f0_utils"]
+	path = ah_stm32f0_utils
+	url = https://github.com/fputc/ah_stm32f0_utils.git
+	branch = master
