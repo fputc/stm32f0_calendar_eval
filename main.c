@@ -5,88 +5,12 @@
 #include "stm32f0xx_misc.h"
 #include "stm32f0xx_rcc.h"
 #include "stm32f0xx_rtc.h"
-#include "stm32f0xx_usart.h"
-
+#include "stm32f0_ah_discovery.h"
 #include "stm32f0xx_ah_delay.h"
 
 #include <stdio.h>
 
 
-void AH_DEBUG_Init(int baudRate) {
-	USART_InitTypeDef USART_InitStructure;
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1,ENABLE);
-
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_1);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_1);
-
-	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_9 | GPIO_Pin_10;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-	USART_InitStructure.USART_BaudRate = baudRate;
-	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	USART_InitStructure.USART_Parity = USART_Parity_No;
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-	USART_Init(USART1, &USART_InitStructure);
-
-	USART_Cmd(USART1,ENABLE);
-}
-
-
-/**
- * @brief  Transmit a char, if you want to use printf(),
- *         you need implement this function
- *
- * @param  pStr	Storage string.
- * @param  c    Character to write.
- */
-void PrintChar(char c)
-{
-	  USART_SendData(USART1, (uint8_t) c);
-	  /* Loop until transmit data register is empty */
-	  while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
-	  {}
-}
-
-/**
-  * @brief  Gets numeric values from the hyperterminal.
-  * @param  None
-  * @retval None
-  */
-uint8_t USART_Scanf(uint32_t value)
-{
-	uint32_t index = 0;
-	uint32_t tmp[2] = {0, 0};
-
-	while (index < 2)
-	{
-		/* Loop until RXNE = 1 */
-		while (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET) {}
-		tmp[index++] = (USART_ReceiveData(USART1));
-		if ((tmp[index - 1] < 0x30) || (tmp[index - 1] > 0x39))
-		{
-			printf("\n\r Please enter valid number between 0 and 9 \n\r");
-			index--;
-		}
-	}
-	/* Calculate the Corresponding value */
-	index = (tmp[1] - 0x30) + ((tmp[0] - 0x30) * 10);
-	/* Checks */
-	if (index > value)
-	{
-		printf("\n\r Please enter valid number between 0 and %d \n\r", value);
-		return 0xFF;
-	}
-	return index;
-}
 
 RTC_TimeTypeDef RTC_TimeStructure;
 RTC_InitTypeDef RTC_InitStructure;
@@ -233,7 +157,7 @@ int main(void)
 {
 	static const char bdt[] = "\n\rBuild date and time: " __DATE__ " " __TIME__ "\n\r";
 	AH_DELAY_SysTickInit();
-	AH_DEBUG_Init(9600);
+	AH_Discovery_Debug_Init(9600);
 	printf("%s", bdt);
 
 	RTC_Config();
