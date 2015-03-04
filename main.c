@@ -137,13 +137,13 @@ void sanityTest (void)
 	NVIC_Init(&NVIC_InitStructure);
 
 	//activate alarm hourly on Sunday
-	/*
+
 	RTC_TimeStructInit(&RTC_TimeStructure);
 	RTC_AlarmStructure.RTC_AlarmTime = RTC_TimeStructure;
 	RTC_AlarmStructure.RTC_AlarmDateWeekDaySel = RTC_AlarmDateWeekDaySel_WeekDay;
 	RTC_AlarmStructure.RTC_AlarmDateWeekDay = RTC_Weekday_Sunday;
-	//RTC_AlarmStructure.RTC_AlarmMask = RTC_AlarmMask_Hours;*/
-	RTC_AlarmStructure.RTC_AlarmMask = RTC_AlarmMask_All;
+	RTC_AlarmStructure.RTC_AlarmMask = RTC_AlarmMask_Hours;
+
 	RTC_SetAlarm(RTC_Format_BIN, RTC_Alarm_A, &RTC_AlarmStructure);
 
 	RTC_ITConfig(RTC_IT_ALRA, ENABLE);
