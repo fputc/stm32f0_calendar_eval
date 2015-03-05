@@ -10,6 +10,8 @@
 #include "stm32f0xx_ah_delay.h"
 #include "datetime_build_defs.h"
 #include <stdio.h>
+#include <time.h>
+
 
 
 RTC_TimeTypeDef RTC_TimeStructure;
@@ -139,6 +141,8 @@ void sanityTest (void)
 	//activate alarm hourly on Sunday
 
 	RTC_TimeStructInit(&RTC_TimeStructure);
+	RTC_TimeStructure.RTC_Minutes = 59;
+	RTC_TimeStructure.RTC_Seconds = 59;
 	RTC_AlarmStructure.RTC_AlarmTime = RTC_TimeStructure;
 	RTC_AlarmStructure.RTC_AlarmDateWeekDaySel = RTC_AlarmDateWeekDaySel_WeekDay;
 	RTC_AlarmStructure.RTC_AlarmDateWeekDay = RTC_Weekday_Sunday;
@@ -205,7 +209,7 @@ void RTC_GetBuildTime(RTC_TimeTypeDef * timeStr) {
 }
 
 
-uint8_t AH_RTC_GetWeekdayForDate(uint8_t year, uint8_t month, uint8_t day) {
+uint8_t AH_RTC_GetWeekdayForDate(uint8_t day, uint8_t month, uint8_t year) {
 	uint8_t weekdays[7] = {
 		RTC_Weekday_Monday,
 		RTC_Weekday_Tuesday,
@@ -215,7 +219,7 @@ uint8_t AH_RTC_GetWeekdayForDate(uint8_t year, uint8_t month, uint8_t day) {
 		RTC_Weekday_Saturday,
 		RTC_Weekday_Sunday,
 	};
-	uint8_t index = ( day                                                  	\
+	uint8_t index = ( day                                              	\
 		+ ((153 * (month + 12 * ((14 - month) / 12) - 3) + 2) / 5) 		\
 		+ (365 * (year + 4800 - ((14 - month) / 12)))              		\
 		+ ((year + 4800 - ((14 - month) / 12)) / 4)                		\
@@ -225,6 +229,7 @@ uint8_t AH_RTC_GetWeekdayForDate(uint8_t year, uint8_t month, uint8_t day) {
 	) % 7;
 	return weekdays[index];
 }
+
 
 void RTC_GetBuildDate(RTC_DateTypeDef * dateStr) {
 
@@ -253,7 +258,7 @@ void RTC_GetBuildDate(RTC_DateTypeDef * dateStr) {
 	dateStr->RTC_Date = date;
 	dateStr->RTC_Month = month;
 	dateStr->RTC_Year = year;
-	dateStr->RTC_WeekDay = RTC_Weekday_Sunday;//AH_RTC_GetWeekdayForDate(year, month, date);
+	dateStr->RTC_WeekDay = RTC_Weekday_Sunday;//AH_RTC_GetWeekdayForDate(date, month, year);
 }
 
 /**
@@ -309,6 +314,52 @@ void EXTI13_Config(void)
   NVIC_Init(&NVIC_InitStructure);
 }
 
+
+time_t AH_RTC_GetTimestamp(RTC_TimeTypeDef ts, RTC_DateTypeDef ds) {
+	struct tm calendar;
+	calendar.tm_hour = ts.RTC_Hours;
+	calendar.tm_min = ts.RTC_Minutes;
+	calendar.tm_sec = ts.RTC_Seconds;
+	calendar.tm_mday = ds.RTC_Date;
+	calendar.tm_mon = ds.RTC_Month - 1; // tm_mon range [0,11] ; RTC_Month range [1,12]
+	calendar.tm_year = 100 + ds.RTC_Year; // tm_year, since 1990 ; RTC_Year since 2000
+	return mktime(&calendar);
+}
+
+/**
+ * parameter in 0-99 range
+ */
+time_t AH_RTC_GetDaylightSavingsStart(uint8_t year) {
+	struct tm calendar;
+	uint8_t weekday = AH_RTC_GetWeekdayForDate(25, 3, year);
+	uint8_t dsDay = 25 + (7 - weekday); // 25th + days until Sunday. This is the date when daylight savings start should occur
+
+	calendar.tm_hour = 1;
+	calendar.tm_min = 59;
+	calendar.tm_sec = 59;
+	calendar.tm_mday = dsDay;
+	calendar.tm_mon = 3 - 1; // tm_mon range is [0,11]
+	calendar.tm_year = 100 + year; // tm_year, since 1990; param since 2000
+	return mktime(&calendar);
+}
+
+/**
+ * parameter in 0-99 range
+ */
+time_t AH_RTC_GetDaylightSavingsEnd(uint8_t year) {
+	struct tm calendar;
+	uint8_t weekday = AH_RTC_GetWeekdayForDate(25, 10, year);
+	uint8_t dsDay = 25 + (7 - weekday); // 25th + days until Sunday. This is the date when daylight savings end should occur
+
+	calendar.tm_hour = 2;
+	calendar.tm_min = 59;
+	calendar.tm_sec = 59;
+	calendar.tm_mday = dsDay;
+	calendar.tm_mon = 10 - 1; // tm_mon range is [0,11]
+	calendar.tm_year = 100 + year; // tm_year, since 1990; param since 2000
+	return mktime(&calendar);
+}
+
 int main(void)
 {
 	//board init
@@ -327,9 +378,39 @@ int main(void)
 	printf("Time set to 5 seconds before start of daylight savings.");
 
 	RTC_Config();
-	sanityTest();
+	//sanityTest();
 	EXTI13_Config();
 
+	/************************testing datetime manipulation **************/
+	/*
+	struct tm currentCalendar;
+	struct tm otherCalendar;
+	time_t currentTimestamp;
+	time_t otherTimestamp;
+
+	currentCalendar.tm_hour = 0;
+	currentCalendar.tm_min = 0;
+	currentCalendar.tm_sec = 0;
+	currentCalendar.tm_mday = 3; //
+	currentCalendar.tm_mon = 6; // months since jan (0,11)
+	currentCalendar.tm_year = 100 + 15; //years since 1900
+
+	otherCalendar.tm_hour = 0;
+	otherCalendar.tm_min = 0;
+	otherCalendar.tm_sec = 0;
+	otherCalendar.tm_mday = 3; //
+	otherCalendar.tm_mon = 6; // months since jan (0,11)
+	otherCalendar.tm_year = 100 + 15; //years since 1900
+
+	currentTimestamp = mktime(&currentCalendar);
+	otherTimestamp = mktime(&otherCalendar);
+
+	if (currentTimestamp == otherTimestamp) {
+		AH_Discovery_Led_Action(AH_Discovery_Led4, AH_Led_Action_Toggle);
+	}
+	 */
+
+	/********************************************************************/
 
 	/*
 	AH_DELAY_DelayMs(5000);
@@ -339,6 +420,14 @@ int main(void)
 		RTC_DayLightSavingConfig(RTC_DayLightSaving_SUB1H, RTC_StoreOperation_Reset);
 	*/
 
+	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
+	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
+
+	const time_t ts = AH_RTC_GetDaylightSavingsStart(15);
+	const time_t te = AH_RTC_GetDaylightSavingsEnd(15);
+
+	printf("Daylight savings start at %s", ctime(&ts));
+	printf("\n\r Daylight savings end at %s", ctime(&te));
     while(1)
     {
     }
