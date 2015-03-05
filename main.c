@@ -18,6 +18,7 @@ RTC_TimeTypeDef RTC_TimeStructure;
 RTC_DateTypeDef RTC_DateStructure;
 RTC_InitTypeDef RTC_InitStructure;
 RTC_AlarmTypeDef  RTC_AlarmStructure;
+GPIO_InitTypeDef   GPIO_InitStructure;
 uint32_t AsynchPrediv = 0, SynchPrediv = 0;
 
 NVIC_InitTypeDef  NVIC_InitStructure;
@@ -58,6 +59,15 @@ void RTC_Config(void)
   /* Configure RTC to produce 1Hz on RTC_OUT (PC13) pin */
   RTC_CalibOutputConfig(RTC_CalibOutput_1Hz);
   RTC_CalibOutputCmd(ENABLE);
+
+  RTC_InitStructure.RTC_AsynchPrediv = AsynchPrediv;
+	RTC_InitStructure.RTC_SynchPrediv = SynchPrediv;
+	RTC_InitStructure.RTC_HourFormat = RTC_HourFormat_24;
+
+  	if (RTC_Init(&RTC_InitStructure) == ERROR)
+  	{
+  	  printf("Prescaler configuration failed \n\r");
+  	}
 }
 
 
@@ -77,24 +87,13 @@ void RTC_TimeShow(void)
 }
 
 
-void sanityTest (void)
-{
-	RTC_InitStructure.RTC_AsynchPrediv = AsynchPrediv;
-	RTC_InitStructure.RTC_SynchPrediv = SynchPrediv;
-	RTC_InitStructure.RTC_HourFormat = RTC_HourFormat_24;
 
-	if (RTC_Init(&RTC_InitStructure) == ERROR)
-	{
-	  printf("Prescaler configuration failed \n\r");
-	}
-
+void setRtcBuildTime(void) {
 	RTC_TimeStructInit(&RTC_TimeStructure);
 	RTC_DateStructInit(&RTC_DateStructure);
 
 	RTC_GetBuildTime(&RTC_TimeStructure);
 	RTC_GetBuildDate(&RTC_DateStructure);
-
-
 
 	//Configure the RTC time register
 	if(!(RTC_SetTime(RTC_Format_BIN, &RTC_TimeStructure)))
@@ -121,9 +120,10 @@ void sanityTest (void)
 		// Indicator for the RTC configuration
 		//RTC_WriteBackupRegister(RTC_BKP_DR0, BKP_VALUE); */
 	}
+}
 
-
-
+void configureAlarm (void)
+{
 	/* EXTI configuration *******************************************************/
 	EXTI_ClearITPendingBit(EXTI_Line17);
 	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
@@ -139,7 +139,6 @@ void sanityTest (void)
 	NVIC_Init(&NVIC_InitStructure);
 
 	//activate alarm hourly on Sunday
-
 	RTC_TimeStructInit(&RTC_TimeStructure);
 	RTC_TimeStructure.RTC_Minutes = 59;
 	RTC_TimeStructure.RTC_Seconds = 59;
@@ -152,11 +151,10 @@ void sanityTest (void)
 
 	RTC_ITConfig(RTC_IT_ALRA, ENABLE);
 	RTC_AlarmCmd(RTC_Alarm_A, ENABLE);
-
 }
 
 
-GPIO_InitTypeDef   GPIO_InitStructure;
+
 
 
 
@@ -208,29 +206,6 @@ void RTC_GetBuildTime(RTC_TimeTypeDef * timeStr) {
 	timeStr->RTC_Seconds = 55;
 }
 
-
-uint8_t AH_RTC_GetWeekdayForDate(uint8_t day, uint8_t month, uint8_t year) {
-	uint8_t weekdays[7] = {
-		RTC_Weekday_Monday,
-		RTC_Weekday_Tuesday,
-		RTC_Weekday_Wednesday,
-		RTC_Weekday_Thursday,
-		RTC_Weekday_Friday,
-		RTC_Weekday_Saturday,
-		RTC_Weekday_Sunday,
-	};
-	uint8_t index = ( day                                              	\
-		+ ((153 * (month + 12 * ((14 - month) / 12) - 3) + 2) / 5) 		\
-		+ (365 * (year + 4800 - ((14 - month) / 12)))              		\
-		+ ((year + 4800 - ((14 - month) / 12)) / 4)                		\
-		- ((year + 4800 - ((14 - month) / 12)) / 100)              		\
-		+ ((year + 4800 - ((14 - month) / 12)) / 400)              		\
-		- 32045                                                    		\
-	) % 7;
-	return weekdays[index];
-}
-
-
 void RTC_GetBuildDate(RTC_DateTypeDef * dateStr) {
 
 	char sdate[] = {
@@ -254,11 +229,40 @@ void RTC_GetBuildDate(RTC_DateTypeDef * dateStr) {
 	uint8_t date = atoi(sdate);
 	uint8_t month = atoi(smonth);
 	uint8_t year = atoi(syear);
-
+	/*
 	dateStr->RTC_Date = date;
 	dateStr->RTC_Month = month;
 	dateStr->RTC_Year = year;
-	dateStr->RTC_WeekDay = RTC_Weekday_Sunday;//AH_RTC_GetWeekdayForDate(date, month, year);
+	dateStr->RTC_WeekDay = AH_RTC_GetWeekdayForDate(date, month, year);
+	*/
+
+	dateStr->RTC_Date = 29;
+	dateStr->RTC_Month = 3;
+	dateStr->RTC_Year = 15;
+	//dateStr->RTC_WeekDay = AH_RTC_GetWeekdayForDate(date, month, year);
+
+}
+
+
+uint8_t AH_RTC_GetWeekdayForDate(uint8_t day, uint8_t month, uint8_t year) {
+	uint8_t weekdays[7] = {
+		RTC_Weekday_Monday,
+		RTC_Weekday_Tuesday,
+		RTC_Weekday_Wednesday,
+		RTC_Weekday_Thursday,
+		RTC_Weekday_Friday,
+		RTC_Weekday_Saturday,
+		RTC_Weekday_Sunday,
+	};
+	uint8_t index = ( day                                              	\
+		+ ((153 * (month + 12 * ((14 - month) / 12) - 3) + 2) / 5) 		\
+		+ (365 * (year + 4800 - ((14 - month) / 12)))              		\
+		+ ((year + 4800 - ((14 - month) / 12)) / 4)                		\
+		- ((year + 4800 - ((14 - month) / 12)) / 100)              		\
+		+ ((year + 4800 - ((14 - month) / 12)) / 400)              		\
+		- 32045                                                    		\
+	) % 7;
+	return weekdays[index];
 }
 
 /**
@@ -284,7 +288,7 @@ void EXTI4_15_IRQHandler(void)
   }
 }
 
-void EXTI13_Config(void)
+void configure1HzInterupt(void)
 {
   /* Enable GPIOc clock */
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
@@ -315,6 +319,12 @@ void EXTI13_Config(void)
 }
 
 
+/**
+ * @brief Calculates unix timestamp for provided date and time.
+ * @param RTC_TimeTypeDef: time RTC struct
+ * @param RTC_DateTypeDef: date RTC struct
+ * @return time_t: unix timestamp
+ */
 time_t AH_RTC_GetTimestamp(RTC_TimeTypeDef ts, RTC_DateTypeDef ds) {
 	struct tm calendar;
 	calendar.tm_hour = ts.RTC_Hours;
@@ -327,7 +337,9 @@ time_t AH_RTC_GetTimestamp(RTC_TimeTypeDef ts, RTC_DateTypeDef ds) {
 }
 
 /**
- * parameter in 0-99 range
+ * @brief Gets unix timestamp of moment when daylight savings should start (beginning of summer time), for provided year.
+ * @param uint8_t: year, in range [0, 99]
+ * @return time_t unix timestamp
  */
 time_t AH_RTC_GetDaylightSavingsStart(uint8_t year) {
 	struct tm calendar;
@@ -344,7 +356,9 @@ time_t AH_RTC_GetDaylightSavingsStart(uint8_t year) {
 }
 
 /**
- * parameter in 0-99 range
+ * @brief Gets unix timestamp of moment when daylight savings should end (beginning of winter time), for provided year.
+ * @param uint8_t: year, in range [0, 99]
+ * @return time_t unix timestamp
  */
 time_t AH_RTC_GetDaylightSavingsEnd(uint8_t year) {
 	struct tm calendar;
@@ -360,6 +374,28 @@ time_t AH_RTC_GetDaylightSavingsEnd(uint8_t year) {
 	return mktime(&calendar);
 }
 
+/**
+ * @brief Returns true if daylight savings regime (summer time) is on, based on current RTC time
+ * @return bool
+ */
+bool AH_RTC_IsDaylightSavingActive(void) {
+	time_t dsStart;
+	time_t dsEnd;
+	time_t now;
+
+	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
+	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
+
+	dsStart = AH_RTC_GetDaylightSavingsStart(RTC_DateStructure.RTC_Year);
+	dsEnd = AH_RTC_GetDaylightSavingsEnd(RTC_DateStructure.RTC_Year);
+	now = AH_RTC_GetTimestamp(RTC_TimeStructure,RTC_DateStructure);
+
+	if ( now > dsStart && now <= dsEnd ) {
+		return true;
+	}
+	return false;
+}
+
 int main(void)
 {
 	//board init
@@ -369,48 +405,23 @@ int main(void)
 	AH_Discovery_Debug_Init(9600);
 
 	//output header
-	printf("==============================================\n\r");
+	printf("=================================================\n\r");
 	printf(">> STM32F0-DISCOVERY RTC Evaluation by Alen H. <<\n\r");
-	printf("==============================================\n\r");
-
-
-	//options
-	printf("Time set to 5 seconds before start of daylight savings.");
+	printf("=================================================\n\r");
 
 	RTC_Config();
-	//sanityTest();
-	EXTI13_Config();
+	setRtcBuildTime();
 
-	/************************testing datetime manipulation **************/
-	/*
-	struct tm currentCalendar;
-	struct tm otherCalendar;
-	time_t currentTimestamp;
-	time_t otherTimestamp;
+	//options
+	printf("Time set to build time.");
 
-	currentCalendar.tm_hour = 0;
-	currentCalendar.tm_min = 0;
-	currentCalendar.tm_sec = 0;
-	currentCalendar.tm_mday = 3; //
-	currentCalendar.tm_mon = 6; // months since jan (0,11)
-	currentCalendar.tm_year = 100 + 15; //years since 1900
+	configureAlarm();
+	configure1HzInterupt();
 
-	otherCalendar.tm_hour = 0;
-	otherCalendar.tm_min = 0;
-	otherCalendar.tm_sec = 0;
-	otherCalendar.tm_mday = 3; //
-	otherCalendar.tm_mon = 6; // months since jan (0,11)
-	otherCalendar.tm_year = 100 + 15; //years since 1900
-
-	currentTimestamp = mktime(&currentCalendar);
-	otherTimestamp = mktime(&otherCalendar);
-
-	if (currentTimestamp == otherTimestamp) {
-		AH_Discovery_Led_Action(AH_Discovery_Led4, AH_Led_Action_Toggle);
+	if (AH_RTC_IsDaylightSavingActive() == true) {
+		AH_Discovery_Led_Action(AH_Discovery_Led4, AH_Led_Action_On);
 	}
-	 */
 
-	/********************************************************************/
 
 	/*
 	AH_DELAY_DelayMs(5000);
@@ -430,5 +441,8 @@ int main(void)
 	printf("\n\r Daylight savings end at %s", ctime(&te));
     while(1)
     {
+    	if (AH_RTC_IsDaylightSavingActive() == true) {
+    			AH_Discovery_Led_Action(AH_Discovery_Led4, AH_Led_Action_On);
+    		}
     }
 }
