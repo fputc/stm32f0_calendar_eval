@@ -8,6 +8,7 @@
 #include "stm32f0xx_syscfg.h"
 #include "stm32f0_ah_discovery.h"
 #include "stm32f0xx_ah_delay.h"
+#include "stm32f0xx_ah_rtc.h"
 #include "datetime_build_defs.h"
 #include <stdio.h>
 #include <time.h>
@@ -339,7 +340,7 @@ time_t AH_RTC_GetTimestamp(RTC_TimeTypeDef ts, RTC_DateTypeDef ds) {
 /**
  * @brief Gets unix timestamp of moment when daylight savings should start (beginning of summer time), for provided year.
  * @param uint8_t: year, in range [0, 99]
- * @return time_t unix timestamp
+ * @return time_t: unix timestamp
  */
 time_t AH_RTC_GetDaylightSavingsStart(uint8_t year) {
 	struct tm calendar;
@@ -374,27 +375,6 @@ time_t AH_RTC_GetDaylightSavingsEnd(uint8_t year) {
 	return mktime(&calendar);
 }
 
-/**
- * @brief Returns true if daylight savings regime (summer time) is on, based on current RTC time
- * @return bool
- */
-bool AH_RTC_IsDaylightSavingActive(void) {
-	time_t dsStart;
-	time_t dsEnd;
-	time_t now;
-
-	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
-	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
-
-	dsStart = AH_RTC_GetDaylightSavingsStart(RTC_DateStructure.RTC_Year);
-	dsEnd = AH_RTC_GetDaylightSavingsEnd(RTC_DateStructure.RTC_Year);
-	now = AH_RTC_GetTimestamp(RTC_TimeStructure,RTC_DateStructure);
-
-	if ( now > dsStart && now <= dsEnd ) {
-		return true;
-	}
-	return false;
-}
 
 int main(void)
 {
