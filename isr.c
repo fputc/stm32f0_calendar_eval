@@ -1,7 +1,19 @@
+/**
+ ******************************************************************************
+ * @file    isr.c
+ * @author  Alen Helac
+ * @version V1.0.0
+ * @brief   Implementation of all Interrupt Service Routines (callbacks)
+ * RTC clock.
+ ******************************************************************************
+ */
+
 #include "isr.h"
 
 /**
- * @brief occurs hourly on Sundays, manages daylight savings time and led
+ * @brief Occurs hourly on Sundays, manages daylight savings time and led
+ * @param  None
+ * @retval None
  */
 void RTC_IRQHandler(void)
 {
@@ -52,7 +64,8 @@ void RTC_IRQHandler(void)
 
 
 /**
-  * @brief  This function handles External line 0 to 1 interrupt request. In our case it's responsible of blinking led3
+  * @brief  This function handles External line 0 to 1 interrupt request. In our case it will be called every second
+  * and it's responsible of blinking led3
   * and updating uart clock
   * @param  None
   * @retval None

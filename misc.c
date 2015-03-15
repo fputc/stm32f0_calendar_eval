@@ -1,3 +1,14 @@
+/**
+ ******************************************************************************
+ * @file    misc.h
+ * @author  Alen Helac
+ * @version V1.0.0
+ * @brief   implementation of miscellaneous functions used across this
+ * application.
+ * RTC clock.
+ ******************************************************************************
+ */
+
 #include "misc.h"
 
 /**

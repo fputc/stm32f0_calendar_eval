@@ -1,3 +1,14 @@
+/**
+ ******************************************************************************
+ * @file    misc.h
+ * @author  Alen Helac
+ * @version V1.0.0
+ * @brief   Declaration of miscellaneous typedefs, constants and functions in
+ * this application.
+ * RTC clock.
+ ******************************************************************************
+ */
+
 #ifndef INC_MISC_H
 #define INC_MISC_H
 
